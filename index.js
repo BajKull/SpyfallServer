@@ -41,7 +41,7 @@ io.on('connection', (socket) => {
 
     socket.emit('message', { message: `Welcome ${user.name}! Room code: ${user.room}`})
     socket.broadcast.to(user.room).emit('message', { message: `${user.name} has joined.`})
-    io.to(user.room).emit('setUserList', users )
+    io.to(user.room).emit('setUserList', users)
 
     callback()
   })
@@ -50,25 +50,24 @@ io.on('connection', (socket) => {
     const user = userDisconnect(socket.id)
 
     if(user) {
+      const users = getUsersInRoom(user.room)
+      io.to(user.room).emit('setUserList', users)
       io.to(user.room).emit('message', { message: `${user.name} has left.`})
     }
   })
 
-  socket.on('ready', () => {
+  socket.on('playerReady', () => {
     const user = getUser(socket.id)
 
     userReady(user.id, user.room)
-    io.to(user.room).emit('roomData', { room: user.room, })
+    io.to(user.room).emit('ready', user.id)
 
-    const gameReadyToStart = gameStart(user.room)
-    if(gameReadyToStart)
-      io.to(user.room).getMaxListeners('gameStarting')
   })
 
   socket.on('sendMessage', (message, callback) => {
     const user = getUser(socket.id)
 
-    io.to(user.room).emit('message', { user: user.name, message:message})
+    io.to(user.room).emit('message', { user: user.name, message:message, color: user.color})
 
     callback()
   })
