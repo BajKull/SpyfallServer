@@ -3,7 +3,7 @@ const http = require('http')
 const socketio = require('socket.io')
 const cors = require('cors')
 
-const { createRoom, joinRoom, userDisconnect, getUser, userReady, gameStart, getUsersInRoom } = require('./Rooms.js')
+const { createRoom, joinRoom, userDisconnect, getUser, userReady, gameStart, getUsersInRoom, changeSpies, changeTime, getSettings } = require('./Rooms.js')
 
 const router = require("./router.js")
 const app = express()
@@ -15,8 +15,8 @@ app.use(router)
 
 io.on('connection', (socket) => {
 
-  socket.on('createRoom', ({ admin }, callback) => {
-    const { error, room } = createRoom({ admin })
+  socket.on('createRoom', (length, callback) => {
+    const { error, room } = createRoom(length)
     if(error)
       return callback(error)
 
@@ -40,6 +40,7 @@ io.on('connection', (socket) => {
     const users = getUsersInRoom(user.room)
 
     socket.emit('message', { message: `Welcome ${user.name}! Room code: ${user.room}`})
+    socket.emit('settings', getSettings(room))
     socket.broadcast.to(user.room).emit('message', { message: `${user.name} has joined.`})
     io.to(user.room).emit('setUserList', users)
 
@@ -61,14 +62,33 @@ io.on('connection', (socket) => {
 
     userReady(user.id, user.room)
     io.to(user.room).emit('ready', user.id)
-
+    if(gameStart) {
+      io.to(user.room).emit('start')
+    }
   })
 
   socket.on('sendMessage', (message, callback) => {
     const user = getUser(socket.id)
 
-    io.to(user.room).emit('message', { user: user.name, message:message, color: user.color})
+    if(user.room !== null)
+      io.to(user.room).emit('message', { user: user.name, message:message, color: user.color})
+      
+    callback()
+  })
 
+  socket.on('changeTime', (amount, callback) => {
+    const user = getUser(socket.id)
+    changeTime(user.room, amount)
+
+    io.to(user.room).emit('updateTime', amount)
+    callback()
+  })
+
+  socket.on('changeSpies', (amount, callback) => {
+    const user = getUser(socket.id)
+    changeSpies(user.room, amount)
+
+    io.to(user.room).emit('updateSpies', amount)
     callback()
   })
 
