@@ -55,20 +55,26 @@ io.on('connection', (socket) => {
       io.to(user.room).emit('setUserList', users)
       io.to(user.room).emit('message', { message: `${user.name} has left.`})
     }
+    else
+      socket.emit('abort')
   })
 
   socket.on('playerReady', () => {
     const user = getUser(socket.id)
-
-    userReady(user.id, user.room)
-    io.to(user.room).emit('ready', user.id)
-    if(gameStart) {
-      io.to(user.room).emit('start')
+    if(user) {
+      userReady(user.id, user.room)
+      io.to(user.room).emit('ready', user.id)
+      if(gameStart) {
+        io.to(user.room).emit('start')
+      }
     }
+    else 
+      socket.emit('abort')
   })
 
   socket.on('sendMessage', (message, callback) => {
     const user = getUser(socket.id)
+
 
     if(user.room !== null)
       io.to(user.room).emit('message', { user: user.name, message:message, color: user.color})
@@ -78,17 +84,23 @@ io.on('connection', (socket) => {
 
   socket.on('changeTime', (amount, callback) => {
     const user = getUser(socket.id)
-    changeTime(user.room, amount)
-
-    io.to(user.room).emit('updateTime', amount)
+    if(user) {
+      changeTime(user.room, amount)
+      io.to(user.room).emit('updateTime', amount)
+    }
+    else 
+      socket.emit('abort')
     callback()
   })
 
   socket.on('changeSpies', (amount, callback) => {
     const user = getUser(socket.id)
-    changeSpies(user.room, amount)
-
-    io.to(user.room).emit('updateSpies', amount)
+    if(user) {
+      changeSpies(user.room, amount)
+      io.to(user.room).emit('updateSpies', amount)
+    }
+    else 
+      socket.emit('abort')
     callback()
   })
 
