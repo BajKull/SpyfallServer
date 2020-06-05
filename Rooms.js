@@ -37,9 +37,9 @@ const joinRoom = ({id, name, room}) => {
 
 
   if(roomValid === undefined)
-    return { error: "Invalid room code" }
+    return { error: "errInvalidCode" }
   if(roomValid.state === "game")
-    return { error: "Game is already in progress" }
+    return { error: "errGameInProgress" }
 
   const user = { 
     id, 
@@ -55,7 +55,6 @@ const joinRoom = ({id, name, room}) => {
 
   roomValid.players.push(user)
 
-  console.log(rooms)
 
 
   return { user }
