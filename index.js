@@ -3,7 +3,7 @@ const http = require('http')
 const socketio = require('socket.io')
 const cors = require('cors')
 
-const { createRoom, joinRoom, userDisconnect, getUser, userReady, gameStart, getUsersInRoom, changeSpies, changeTime, getSettings } = require('./Rooms.js')
+const { createRoom, joinRoom, userDisconnect, getUser, userReady, gameStart, getUsersInRoom, changeSpies, changeTime, getSettings, resetReady } = require('./Rooms.js')
 
 const router = require("./router.js")
 const app = express()
@@ -15,8 +15,8 @@ app.use(router)
 
 io.on('connection', (socket) => {
 
-  socket.on('createRoom', (length, callback) => {
-    const { error, room } = createRoom(length)
+  socket.on('createRoom', (places, callback) => {
+    const { error, room } = createRoom(places)
     if(error)
       return callback(error)
 
@@ -51,6 +51,7 @@ io.on('connection', (socket) => {
     const user = userDisconnect(socket.id)
 
     if(user) {
+      console.log(`${user.name} disconnected from room ${user.room}`)
       const users = getUsersInRoom(user.room)
       io.to(user.room).emit('setUserList', users)
       io.to(user.room).emit('message', { message: `${user.name} has left.`})
@@ -64,8 +65,14 @@ io.on('connection', (socket) => {
     if(user) {
       userReady(user.id, user.room)
       io.to(user.room).emit('ready', user.id)
-      if(gameStart) {
+      const info = gameStart(user.room)
+      if(info === true) {
         io.to(user.room).emit('start')
+        resetReady(user.room)
+      }
+      else if (info !== false) {
+        info.forEach(data => io.to(data.id).emit('start', {place: data.place, role: data.role}))
+        resetReady(user.room)
       }
     }
     else 

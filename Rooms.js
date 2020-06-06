@@ -22,7 +22,7 @@ const createRoom = (places) => {
     settings: {
       spies: 1,
       time: 7,
-      placesAmount: places
+      places: places,
     }
   }
   rooms.push(room)
@@ -92,7 +92,59 @@ const userReady = (id, room) => {
   rooms[roomIndex].players[playerIndex].ready = true
 }
 
-const gameStart = (roomID) => rooms.find(room => room.name === roomID).players.find(user => user.ready === false)
+const gameStart = (roomID) => {
+  // when creating room client sends list of places to the server
+  const room = rooms.find(room => room.name === roomID)
+  const everyoneReady = room.players.find(user => user.ready === false)
+  if(everyoneReady)
+    return false
+  else {
+    if(room.players.length >= 3) {
+      if(room.state === "lobby") {
+        const place = Math.floor(Math.random() * room.settings.places.length)
+        const amountOfRoles = room.settings.places[place]
+        const amountOfSpies = room.settings.spies
+        const amountOfPlayers = room.players.length
+  
+        // get amount of roles for given location and give a role to each player
+        const data = []
+        for(let i = 0; i < amountOfPlayers; i++) {
+          const role = Math.floor(Math.random() * amountOfRoles)
+          const player = {
+            id: room.players[i].id,
+            place: place,
+            role: role
+          }
+          data.push(player)
+        }
+        // randomize spies, -1 equals spy, other numbers are roles
+        let i = amountOfSpies
+        while(i > 0) {
+          const spy = Math.floor(Math.random() * amountOfPlayers)
+          if(data[spy].role !== -1) {
+            data[spy].role = -1
+            i--
+          }
+        }
+  
+        return data
+      }
+      else
+        return true
+    }
+    else
+      return false
+  }
+}
+
+const resetReady = (roomID) => {
+  const roomIndex = rooms.findIndex(room => room.name === roomID)
+  rooms[roomIndex].players.forEach(player => player.ready = false)
+  if(rooms[roomIndex].state === "lobby") 
+    rooms[roomIndex].state === "gameRoles"
+  else
+    rooms[roomIndex].state === "gameTimer"
+}
 
 const changeTime = (roomID, amount) => {
   rooms.find(room => room.name === roomID).settings.time += amount
@@ -104,4 +156,4 @@ const changeSpies = (roomID, amount) => {
 
 const getSettings = (roomID) => rooms.find(room => room.name === roomID).settings
 
-module.exports =  { createRoom, joinRoom, userDisconnect, getUser, userReady, getUsersInRoom, gameStart, changeTime, changeSpies, getSettings }
+module.exports =  { createRoom, joinRoom, userDisconnect, getUser, userReady, getUsersInRoom, gameStart, changeTime, changeSpies, getSettings, resetReady }
